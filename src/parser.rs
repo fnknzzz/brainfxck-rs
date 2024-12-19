@@ -1,5 +1,5 @@
 use crate::ast::{Program, Statement};
-use crate::lexer::{Lexer, Token};
+use crate::lexer::{Lexer, LexerError, Token};
 use std::cell::RefCell;
 
 struct State {
@@ -17,18 +17,25 @@ macro_rules! add_token {
   };
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug)]
 pub enum ParseError {
   UnexceptedTokenRightBracket,
   UnclosedLeftBracket,
+  LexerError(LexerError),
+}
+
+impl From<LexerError> for ParseError {
+    fn from(err: LexerError) -> Self {
+        ParseError::LexerError(err)
+    }
 }
 
 pub fn parse<'a>(source: &'a str) -> Result<Program, ParseError> {
-  let lexer = Lexer::new(source);
+  let lexer = Lexer::new(source)?;
   let mut state = State {
     current_stmts: vec![RefCell::new(vec![])],
   };
-  for token in lexer.tokens.iter() {
+  for token in lexer.tokens {
     match token {
       Token::GreaterThan => {
         add_token!(state, IncPtrStmt);
